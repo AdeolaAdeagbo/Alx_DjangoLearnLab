@@ -27,15 +27,19 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
-# Security Settings
-SECURE_BROWSER_XSS_FILTER = True
+# Additional Security Headers
 X_FRAME_OPTIONS = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+
+# Secure Cookies
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 
-# HTTPS Settings (for production)
-SECURE_SSL_REDIRECT = False  # Set True in production
-SECURE_HSTS_SECONDS = 31536000
+# HTTPS/SSL Settings
+SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
+SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
