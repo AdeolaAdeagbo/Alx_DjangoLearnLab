@@ -1,24 +1,30 @@
-from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Book
+from django.shortcuts import render
+from django.contrib.auth.decorators import permission_required
+from .models import Book
 
-class CustomUserAdmin(UserAdmin):
-    """Admin configuration for CustomUser."""
-    
-    model = CustomUser
-    
-    # Fields to display in the user list
-    list_display = ['username', 'email', 'first_name', 'last_name', 'is_staff', 'date_of_birth']
-    
-    # Add custom fields to the user edit form
-    fieldsets = UserAdmin.fieldsets + (
-        ('Additional Info', {'fields': ('date_of_birth', 'profile_photo')}),
-    )
-    
-    # Add custom fields to the user creation form
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Additional Info', {'fields': ('date_of_birth', 'profile_photo')}),
-    )
+@permission_required('bookshelf.can_view', raise_exception=True)
+def book_list(request):
+    """View books - requires can_view permission."""
+    books = Book.objects.all()
+    return render(request, 'bookshelf/book_list.html', {'books': books})
 
-admin.site.register(CustomUser, CustomUserAdmin)
-admin.site.register(Book)
+@permission_required('bookshelf.can_create', raise_exception=True)
+def create_book(request):
+    """Create book - requires can_create permission."""
+    if request.method == 'POST':
+        Book.objects.create(
+            title=request.POST['title'],
+            author=request.POST['author'],
+            publication_year=request.POST['publication_year']
+        )
+    return render(request, 'bookshelf/form_example.html')
+
+@permission_required('bookshelf.can_edit', raise_exception=True)
+def edit_book(request, pk):
+    """Edit book - requires can_edit permission."""
+    return render(request, 'bookshelf/form_example.html')
+
+@permission_required('bookshelf.can_delete', raise_exception=True)
+def delete_book(request, pk):
+    """Delete book - requires can_delete permission."""
+    return render(request, 'bookshelf/form_example.html')
