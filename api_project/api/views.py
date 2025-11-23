@@ -1,4 +1,5 @@
 from rest_framework import generics, viewsets
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from .models import Book
 from .serializers import BookSerializer
 
@@ -10,20 +11,15 @@ class BookList(generics.ListAPIView):
     """
     queryset = Book.objects.all()
     serializer_class = BookSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]  # Add this
 
 
-# Add this new ViewSet
 class BookViewSet(viewsets.ModelViewSet):
     """
     ViewSet for performing CRUD operations on Book model.
-    
-    Provides:
-    - list: GET /api/books_all/
-    - create: POST /api/books_all/
-    - retrieve: GET /api/books_all/{id}/
-    - update: PUT /api/books_all/{id}/
-    - partial_update: PATCH /api/books_all/{id}/
-    - destroy: DELETE /api/books_all/{id}/
+    Requires authentication for create, update, delete.
+    Anyone can read.
     """
     queryset = Book.objects.all()
     serializer_class = BookSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]  # Add this
