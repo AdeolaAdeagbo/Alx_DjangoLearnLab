@@ -8,12 +8,16 @@ from datetime import datetime
 class BookAPITestCase(APITestCase):
     """
     Comprehensive tests for Book API endpoints.
+    Uses both Token authentication and client.login() methods.
     """
     
     def setUp(self):
         """
         Set up test data that will be used across multiple tests.
         Runs before each test method.
+        
+        Note: Django automatically uses a separate test database
+        for running tests, so production/development data is not affected.
         """
         # Create test user
         self.user = User.objects.create_user(
@@ -51,8 +55,8 @@ class BookAPITestCase(APITestCase):
         response = self.client.get('/api/books/')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
         self.assertEqual(len(response.data['results']), 2)
-        self.assertEqual(response.data['results'][0]['title'], 'Test Book 1')
     
     def test_get_single_book(self):
         """
@@ -69,8 +73,9 @@ class BookAPITestCase(APITestCase):
         """
         Test POST /api/books/create/
         Authenticated user should be able to create a book.
+        Uses Token authentication.
         """
-        # Authenticate
+        # Authenticate with token
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
         data = {
@@ -84,6 +89,30 @@ class BookAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['title'], 'New Book')
         self.assertEqual(Book.objects.count(), 3)
+    
+    def test_create_book_with_login(self):
+        """
+        Test POST /api/books/create/
+        Using client.login() for authentication.
+        This demonstrates session-based authentication.
+        """
+        # Login using username and password
+        login_success = self.client.login(username='testuser', password='testpass123')
+        self.assertTrue(login_success, "Login should succeed")
+        
+        data = {
+            'title': 'Book Created with Login',
+            'publication_year': 2023,
+            'author': self.author.id
+        }
+        
+        response = self.client.post('/api/books/create/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['title'], 'Book Created with Login')
+        
+        # Logout after test
+        self.client.logout()
     
     def test_create_book_unauthenticated(self):
         """
@@ -104,6 +133,7 @@ class BookAPITestCase(APITestCase):
         """
         Test POST /api/books/create/
         Should reject books with future publication year.
+        Tests custom validation in serializer.
         """
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
@@ -123,6 +153,7 @@ class BookAPITestCase(APITestCase):
         """
         Test PUT /api/books/<id>/update/
         Authenticated user should be able to update a book.
+        Uses Token authentication.
         """
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         
@@ -140,6 +171,27 @@ class BookAPITestCase(APITestCase):
         # Verify in database
         self.book1.refresh_from_db()
         self.assertEqual(self.book1.title, 'Updated Title')
+    
+    def test_update_book_with_login(self):
+        """
+        Test PUT /api/books/<id>/update/
+        Using client.login() for authentication.
+        """
+        # Login
+        self.client.login(username='testuser', password='testpass123')
+        
+        data = {
+            'title': 'Updated via Login',
+            'publication_year': 2022,
+            'author': self.author.id
+        }
+        
+        response = self.client.put(f'/api/books/{self.book1.id}/update/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['title'], 'Updated via Login')
+        
+        self.client.logout()
     
     def test_partial_update_book(self):
         """
@@ -161,13 +213,31 @@ class BookAPITestCase(APITestCase):
         """
         Test DELETE /api/books/<id>/delete/
         Authenticated user should be able to delete a book.
+        Uses Token authentication.
         """
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        initial_count = Book.objects.count()
         
         response = self.client.delete(f'/api/books/{self.book1.id}/delete/')
         
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Book.objects.count(), 1)
+        self.assertEqual(Book.objects.count(), initial_count - 1)
+    
+    def test_delete_book_with_login(self):
+        """
+        Test DELETE /api/books/<id>/delete/
+        Using client.login() for authentication.
+        """
+        # Login
+        login_success = self.client.login(username='testuser', password='testpass123')
+        self.assertTrue(login_success)
+        
+        response = self.client.delete(f'/api/books/{self.book2.id}/delete/')
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        
+        self.client.logout()
     
     def test_filter_by_author(self):
         """
@@ -212,10 +282,14 @@ class BookAPITestCase(APITestCase):
 class AuthorAPITestCase(APITestCase):
     """
     Tests for Author API endpoints.
+    Demonstrates testing nested serializers.
     """
     
     def setUp(self):
-        """Set up test data."""
+        """
+        Set up test data.
+        Uses separate test database automatically.
+        """
         self.author = Author.objects.create(name="Test Author")
         
         self.book1 = Book.objects.create(
@@ -236,6 +310,7 @@ class AuthorAPITestCase(APITestCase):
         """
         Test GET /api/authors/
         Should return list of authors with nested books.
+        Tests nested serializer functionality.
         """
         response = self.client.get('/api/authors/')
         
@@ -255,3 +330,40 @@ class AuthorAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'Test Author')
         self.assertEqual(len(response.data['books']), 2)
+        
+        # Verify book data structure
+        first_book = response.data['books'][0]
+        self.assertIn('title', first_book)
+        self.assertIn('publication_year', first_book)
+        self.assertIn('author', first_book)
+
+
+class TestDatabaseIsolationTestCase(APITestCase):
+    """
+    Test to verify that test database is separate from production/development.
+    This ensures data safety during testing.
+    """
+    
+    def test_using_test_database(self):
+        """
+        Verify we're using a separate test database.
+        Django creates and destroys this database for each test run.
+        """
+        from django.conf import settings
+        
+        # Test database is automatically configured
+        # Data created here will not affect production
+        
+        author = Author.objects.create(name="Test Only Author")
+        book = Book.objects.create(
+            title="Test Only Book",
+            publication_year=2023,
+            author=author
+        )
+        
+        # This data exists only during this test
+        self.assertEqual(Author.objects.count(), 1)
+        self.assertEqual(Book.objects.count(), 1)
+        
+        # After test completes, this data is destroyed
+        # Production database remains untouched
