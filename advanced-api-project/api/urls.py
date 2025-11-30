@@ -20,4 +20,7 @@ urlpatterns = [
     # Author endpoints
     path('authors/', AuthorListView.as_view(), name='author-list'),
     path('authors/<int:pk>/', AuthorDetailView.as_view(), name='author-detail'),
+
+    path('books/update/', BookUpdateView.as_view(), name='book-update'),
+    path('books/delete/', BookDeleteView.as_view(), name='book-delete'),
 ]
