@@ -1,0 +1,20 @@
+{% extends 'blog/base.html' %}
+
+{% block title %}Delete Comment - Django Blog{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Delete Comment</h2>
+    <p>Are you sure you want to delete this comment?</p>
+    
+    <div style="background: #f4f4f4; padding: 1rem; margin: 1rem 0; border-left: 3px solid #666;">
+        <p>{{ comment.content }}</p>
+    </div>
+    
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        <a href="{% url 'post-detail' comment.post.pk %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

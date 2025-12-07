@@ -1,0 +1,44 @@
+{% extends 'blog/base.html' %}
+
+{% block title %}Home - Django Blog{% endblock %}
+
+{% block content %}
+<h1>Blog Posts</h1>
+
+{% if user.is_authenticated %}
+<div style="margin-bottom: 2rem;">
+    <a href="{% url 'post-create' %}" class="btn">Create New Post</a>
+</div>
+{% endif %}
+
+{% for post in posts %}
+<div class="card">
+    <h2><a href="{% url 'post-detail' post.pk %}" style="text-decoration: none; color: inherit;">{{ post.title }}</a></h2>
+    <div class="card-meta">
+        By <strong>{{ post.author.username }}</strong> on {{ post.published_date|date:"F d, Y" }}
+    </div>
+    <p>{{ post.content|truncatewords:50 }}</p>
+    <a href="{% url 'post-detail' post.pk %}" class="btn">Read More</a>
+</div>
+{% empty %}
+<div class="card">
+    <p>No posts yet. Be the first to create one!</p>
+</div>
+{% endfor %}
+
+{% if is_paginated %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page=1">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+    {% endif %}
+    
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
